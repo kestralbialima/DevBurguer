@@ -7,7 +7,7 @@ import { ToastContainer } from 'react-toastify';
 import { UserProvider } from './hooks/UserContext'; 
 import { CartProvider } from './hooks/CartContext';
 import { router } from './Routes'; 
-import GlobalStyles from './styles/globalStyles';
+import GlobalStyles from './styles/GlobalStyles';
 import 'react-toastify/dist/ReactToastify.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
