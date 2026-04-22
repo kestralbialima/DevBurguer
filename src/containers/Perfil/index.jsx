@@ -1,24 +1,25 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiTrash2 } from 'react-icons/fi'; 
+import { toast } from 'react-toastify';
 
-import { useUser } from '../../hooks/UserContext'; // 🚀 Hook para pegar dados do Player
-import { Title } from '../../components/Title';      // Seu componente de título neon
-import { Button } from '../../components/Button';    // Seu componente de botão padrão
+import api from '../../services/api';
+import { useUser } from '../../hooks/UserContext'; 
+import { Title } from '../../components/Title';
+import { Button } from '../../components/Button';
 
-// --- 🎨 ESTILIZAÇÃO ---
+// --- 🎨 ESTILIZAÇÃO (Componentes Internos para evitar erro 500) ---
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 30px;
-  /* 🛠️ Ajuste de Padding: 140px no topo garante que o Header não corte o título */
   padding: 140px 20px 60px 20px; 
   min-height: 100vh;
   width: 100%;
-  background: transparent; // Deixa as partículas do fundo aparecerem
+  background: transparent;
 `;
 
 const InfoCard = styled.div`
@@ -29,7 +30,7 @@ const InfoCard = styled.div`
   width: 100%;
   max-width: 600px;
   box-shadow: 0 0 25px rgba(0, 194, 255, 0.2);
-  backdrop-filter: blur(10px); // Efeito de vidro (Glassmorphism)
+  backdrop-filter: blur(10px);
 
   .field {
     margin-bottom: 25px;
@@ -63,15 +64,62 @@ const InfoCard = styled.div`
   }
 `;
 
+// 🚨 Botão de Exclusão (Estilo Alerta Vermelho Neon)
+const DeleteAccountButton = styled.button`
+  background: transparent;
+  color: #ff4444;
+  border: 1px solid #ff4444;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-family: 'Bangers', cursive;
+  font-size: 14px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+
+  &:hover {
+    background: #ff4444;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(255, 68, 68, 0.5);
+  }
+`;
+
 // --- 🕹️ COMPONENTE PRINCIPAL ---
 
 export function Perfil() {
-  const { userData } = useUser(); // 👤 Puxa os dados reais do jogador (nome, email, admin)
-  const navigate = useNavigate(); // 🧭 Hook para navegação
+  const { userData, logout } = useUser(); 
+  const navigate = useNavigate();
+
+  // 🛡️ FUNÇÃO: Excluir a própria conta
+  const handleDeleteAccount = async () => {
+    // Confirmação de segurança nativa do browser
+    const confirmDelete = window.confirm(
+      "ATENÇÃO, PLAYER! Você está prestes a apagar sua conta permanentemente. Confirmar exclusão?"
+    );
+
+    if (confirmDelete) {
+      try {
+        // Chamada ao backend passando o ID do usuário logado
+        await api.delete(`/users/${userData.id}`);
+        
+        toast.success("Conta excluída com sucesso. Até a próxima!");
+        
+        logout(); // Limpa os dados do LocalStorage e encerra a sessão
+        navigate('/login'); // Redireciona para o início
+      } catch (err) {
+        // Se der erro 404 ou 500 no banco, avisa o usuário
+        toast.error("Ocorreu um erro ao tentar excluir sua conta.");
+      }
+    }
+  };
 
   return (
     <Container>
-      {/* Título com brilho azul neon */}
+      {/* Título com brilho azul neon via Prop do componente Title */}
       <Title $size="40px" style={{ textShadow: '0 0 15px #00c2ff' }}>
         STATUS DO PLAYER
       </Title>
@@ -93,10 +141,23 @@ export function Perfil() {
             {userData?.admin ? 'ADMINISTRADOR' : 'PLAYER VIP'}
           </p>
         </div>
+
+        {/* 🚨 ZONA DE RISCO: Só aparece para usuários que NÃO são administradores 
+            Proteção lógica para não deletar a conta Master por aqui.
+        */}
+        {!userData?.admin && (
+          <div style={{ marginTop: '30px', borderTop: '1px solid rgba(255, 68, 68, 0.2)', paddingTop: '20px' }}>
+            <label style={{ color: '#ff4444', fontSize: '11px', display: 'block', marginBottom: '10px' }}>
+              GERENCIAMENTO DE CONTA
+            </label>
+            <DeleteAccountButton onClick={handleDeleteAccount}>
+              <FiTrash2 size={18} /> DELETAR MINHA CONTA
+            </DeleteAccountButton>
+          </div>
+        )}
       </InfoCard>
 
-      {/* 🔙 Botão de Voltar: Reutiliza o seu componente Button. 
-          O navigate(-1) faz o usuário voltar exatamente de onde ele veio. */}
+      {/* Botão de Voltar */}
       <Button 
         onClick={() => navigate(-1)} 
         style={{ 

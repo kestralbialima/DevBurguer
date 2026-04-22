@@ -1,21 +1,31 @@
 import axios from 'axios';
 
-// 🚀 Criamos a conexão base com o seu servidor Node
-export const api = axios.create({
-  baseURL: 'http://localhost:3001',
+/**
+ * 🚀 CONFIGURAÇÃO DA BASE URL:
+ * Se estivermos em produção (no Render), usamos a URL da API live.
+ * Caso contrário, usamos o localhost para testes.
+ */
+const api = axios.create({
+  baseURL: import.meta.env.MODE === 'production' 
+    ? 'https://devburger-backend-a4zs.onrender.com' 
+    : 'http://localhost:3001',
 });
 
 /* 🔒 INTERCEPTOR DE SEGURANÇA:
-  Ele roda ANTES de cada requisição. Ele vai no "bolso" do navegador (LocalStorage),
-  pega o Token do usuário e coloca no cabeçalho (Header) da chamada.
+   Ele garante que o Token de autenticação acompanhe todas as chamadas,
+   permitindo que o usuário acesse áreas protegidas e faça pedidos.
 */
 api.interceptors.request.use(async (config) => {
-  const userData = await localStorage.getItem('devburger:userData');
-  const token = userData && JSON.parse(userData).token;
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const userData = localStorage.getItem('devburger:userData');
+  
+  if (userData) {
+    const token = JSON.parse(userData).token;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   
   return config;
 });
+
+export default api;

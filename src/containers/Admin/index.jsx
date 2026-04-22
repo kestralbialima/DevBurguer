@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiList, FiActivity, FiLogOut, FiMenu, FiX, FiTag } from 'react-icons/fi';
+import { 
+    FiShoppingCart, FiList, FiActivity, FiLogOut, 
+    FiMenu, FiX, FiTag, FiUsers // 👥 Ícone de Usuários adicionado
+} from 'react-icons/fi';
 
 import { Dashboard } from './Dashboard'; 
 import { ListProducts } from './ListProducts';
 import { Orders } from './Orders'; 
 import { EditProduct } from './EditProduct';
-import { NewProduct } from './NewProduct'; // 🆕 Reativação da forja!
-import { CouponManager } from './CouponManager'; // 🎟️ Módulo de Cupons
+import { NewProduct } from './NewProduct';
+import { CouponManager } from './CouponManager'; 
+import { UserManager } from './UserManager'; // 👈 Importação da nova tela
 
 import { 
     Container, AdminMenu, AdminContent, MenuButton, 
@@ -16,13 +20,11 @@ import {
 
 export function Admin() {
     const navigate = useNavigate();
-    const [activeScreen, setActiveScreen] = useState('ORDERS'); // Pedidos passa a ser a inicial
+    const [activeScreen, setActiveScreen] = useState('ORDERS'); 
     const [isMenuOpen, setIsMenuOpen] = useState(false); 
     
-    // 🕹️ ESTADO NOVO: Guarda o produto que a Lista enviou para editar
     const [productToEdit, setProductToEdit] = useState(null);
     const [preSelectedCategory, setPreSelectedCategory] = useState(null);
-    // ✅ Tarefa 2: chave increm. forja remontagem do ListProducts após edição
     const [refreshKey, setRefreshKey] = useState(0);
 
     const logout = () => {
@@ -30,18 +32,14 @@ export function Admin() {
         navigate('/login');
     };
 
-    // Função para mudar de tela
     const handleScreenChange = (screen) => {
         setActiveScreen(screen);
         setIsMenuOpen(false); 
     };
 
-    /** * 🛠️ FUNÇÃO DE PONTE: 
-     * A ListProducts vai chamar essa função quando você clicar no ícone de editar.
-     */
     const handleEditProduct = (product) => {
-        setProductToEdit(product);    // Salva o produto
-        setActiveScreen('EDIT_PRODUCT'); // Muda para a tela de edição
+        setProductToEdit(product);
+        setActiveScreen('EDIT_PRODUCT');
     };
 
     const handleNewProduct = (categoryId) => {
@@ -88,12 +86,19 @@ export function Admin() {
                         <FiList /> INVENTÁRIO
                     </MenuButton>
 
-                    {/* 🎟️ NOVO: Gerenciamento de Cupons */}
                     <MenuButton 
                         $active={activeScreen === 'COUPONS'} 
                         onClick={() => handleScreenChange('COUPONS')}
                     >
                         <FiTag /> CUPONS
+                    </MenuButton>
+
+                    {/* 👥 NOVO: Botão de Gestão de Usuários */}
+                    <MenuButton 
+                        $active={activeScreen === 'USERS'} 
+                        onClick={() => handleScreenChange('USERS')}
+                    >
+                        <FiUsers /> USUÁRIOS
                     </MenuButton>
                 </nav>
 
@@ -110,13 +115,9 @@ export function Admin() {
             </AdminMenu>
 
             <AdminContent>
-                {/* 📊 DASHBOARD: Métricas e Vendas (Top 5) */}
                 {activeScreen === 'DASHBOARD' && <Dashboard />}
-
-                {/* 🛒 PEDIDOS: Renderiza a tela Orders ligada ao Mongo */}
                 {activeScreen === 'ORDERS' && <Orders />}
                 
-                {/* 📋 LISTA: Passamos a função de ponte como Prop */}
                 {activeScreen === 'LIST_PRODUCTS' && (
                     <ListProducts
                       key={refreshKey}
@@ -125,7 +126,6 @@ export function Admin() {
                     />
                 )}
 
-                {/* ✨ FORJA: Tela para Novo Item vindo direto da aba correta */}
                 {activeScreen === 'NEW_PRODUCT' && (
                     <NewProduct 
                       preSelectedCategory={preSelectedCategory} 
@@ -133,18 +133,18 @@ export function Admin() {
                     />
                 )}
 
-                {/* ✏️ EDITAR: Tela de Edição (passando o produto selecionado) */}
                 {activeScreen === 'EDIT_PRODUCT' && (
                     <EditProduct
                         product={productToEdit}
                         onBack={() => setActiveScreen('LIST_PRODUCTS')}
-                        // ✅ Tarefa 2: onSuccess incrementa refreshKey -> ListProducts remonta e chama loadData()
                         onSuccess={() => setRefreshKey(k => k + 1)}
                     />
                 )}
 
-                {/* 🎟️ CUPONS: Gerenciamento de cupons de desconto */}
                 {activeScreen === 'COUPONS' && <CouponManager />}
+
+                {/* 🛡️ NOVO: Renderização da tela de Usuários */}
+                {activeScreen === 'USERS' && <UserManager />}
             </AdminContent>
         </Container>
     );

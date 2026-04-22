@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from "yup";
 import { toast } from 'react-toastify';
 import styled from 'styled-components';
+
+// 🛡️ IMPORTAÇÃO CORRIGIDA: Adicionando o useUser que estava faltando
+import { useUser } from '../../hooks/UserContext'; 
 
 import { api } from '../../services/api';
 import { Button } from '../../components/Button';
@@ -14,17 +17,36 @@ import { ParticlesBackground } from '../../components/ParticlesBackground';
 
 export function Login() {
   const navigate = useNavigate();
+  const { state } = useLocation(); 
+  
+  // ✅ Agora o useUser está devidamente importado e pronto para uso
+  const { putUserData } = useUser(); 
+  
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
 
+  /**
+   * 📝 ESQUEMA DE VALIDAÇÃO (YUP):
+   * Define as regras para os campos antes de enviar os dados.
+   */
   const schema = yup.object({
-    email: yup.string().email('E-mail inválido').required('O e-mail é obrigatório'),
-    password: yup.string().min(6, 'Mínimo 6 caracteres').required('Senha obrigatória'),
+    email: yup.string().email("Digite um e-mail válido").required("O e-mail é obrigatório"),
+    password: isForgotPassword 
+      ? yup.string() // Se for recuperação, a senha não é validada aqui
+      : yup.string().min(6, "A senha deve ter pelo menos 6 caracteres").required("A senha é obrigatória"),
   }).required();
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: yupResolver(schema)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(schema),
   });
 
-  const onSubmit = async (data) => {
+  /**
+   * 🚀 FUNÇÃO 1: Login de Sessão
+   */
+  const onSubmitLogin = async (data) => {
     try {
       const { data: userData } = await api.post('/sessions', {
         email: data.email,
@@ -32,25 +54,57 @@ export function Login() {
       });
 
       toast.success('WELCOME BACK, PLAYER! 🍔');
-      localStorage.setItem('devburger:userData', JSON.stringify(userData));
-      navigate('/');
+
+      // 💾 SALVAMENTO GLOBAL: Atualiza Context e LocalStorage
+      await putUserData(userData);
+
+      // 🧠 LÓGICA DE REDIRECIONAMENTO:
+      const from = state?.from;
+
+      if (from) {
+        navigate(from, { replace: true });
+      } else {
+        if (userData.role !== 'client') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
+      }
+
     } catch (error) {
+      console.error(error);
       toast.error('GAME OVER: Credenciais incorretas ❌');
+    }
+  };
+
+  /**
+   * 📩 FUNÇÃO 2: Recuperação de Senha
+   */
+  const onSubmitForgot = async (data) => {
+    try {
+      await api.post('/forgot-password', { email: data.email });
+      
+      toast.info('Se o e-mail estiver na nossa base, as instruções foram enviadas! 📬');
+      setIsForgotPassword(false); 
+    } catch (error) {
+      toast.error('Erro ao processar solicitação.');
     }
   };
 
   return (
     <Container className="page-enter">
-      {/* 🎆 ParticlesBackground exclusivo da tela de login — consistência visual com a Home */}
       <ParticlesBackground />
+      
       <LeftSide>
         <Title $size="clamp(26px, 4vh, 44px)">PRESS START TO</Title>
         <LogoTitleImage src={Logo} alt="logo-devburger" $maxWidth="clamp(200px, 22vh, 350px)" />
       </LeftSide>
 
-      <Form onSubmit={handleSubmit(onSubmit)}>
+      {/* 🛠️ O handleSubmit escolhe a função correta baseada no estado isForgotPassword */}
+      <Form onSubmit={handleSubmit(isForgotPassword ? onSubmitForgot : onSubmitLogin)}>
+        
         <Title as="h2" $size="28px" style={{ textAlign: 'center', marginBottom: '10px' }}>
-          READY? LOGIN!
+          {isForgotPassword ? 'PASSWORD RECOVERY' : 'READY? LOGIN!'}
         </Title>
 
         <InputContainer>
@@ -59,38 +113,66 @@ export function Login() {
           <p className="error-msg">{errors?.email?.message}</p>
         </InputContainer>
 
-        <InputContainer>
-          <label>PASSWORD</label>
-          <input type="password" placeholder="Sua senha secreta" {...register("password")} />
-          <p className="error-msg">{errors?.password?.message}</p>
-        </InputContainer>
+        {!isForgotPassword && (
+          <>
+            <InputContainer>
+              <label>PASSWORD</label>
+              <input type="password" placeholder="Sua senha secreta" {...register("password")} />
+              <p className="error-msg">{errors?.password?.message}</p>
+            </InputContainer>
 
-        {/* 🚀 BOTÃO PRINCIPAL: Cor forte para chamar o clique */}
+            <ForgotPasswordLink type="button" onClick={() => setIsForgotPassword(true)}>
+                FORGOT PASSWORD?
+            </ForgotPasswordLink>
+          </>
+        )}
+
         <Button type="submit" style={{ marginTop: '10px' }}>
-          START GAME
+          {isForgotPassword ? 'SEND INSTRUCTIONS' : 'START GAME'}
         </Button>
 
-        {/* 🚀 DESTAQUE CADASTRO: Usando estilo de link gamer */}
         <SignUpSection>
-           <span>NEW PLAYER?</span>
-           <LinkItem to="/cadastro">SIGN UP HERE</LinkItem>
+          {isForgotPassword ? (
+              <LinkItem as="button" type="button" onClick={() => setIsForgotPassword(false)}>
+                  BACK TO LOGIN
+              </LinkItem>
+          ) : (
+            <>
+              <span>NEW PLAYER?</span>
+              <LinkItem to="/cadastro">SIGN UP HERE</LinkItem>
+            </>
+          )}
         </SignUpSection>
 
-        {/* 🚀 BOTÃO EXIT: Adicionado novamente com estilo neutro */}
-        <Button 
-          type="button" 
-          $black={true} 
-          onClick={() => navigate('/')}
-          style={{ height: '40px', fontSize: '18px' }}
-        >
-          EXIT TO HOME
-        </Button>
+        {!isForgotPassword && (
+          <Button 
+            type="button" 
+            $black={true} 
+            onClick={() => navigate('/')}
+            style={{ height: '40px', fontSize: '18px' }}
+          >
+            EXIT TO HOME
+          </Button>
+        )}
       </Form>
     </Container>
   );
 }
 
-// --- 🎨 ESTILIZAÇÃO PARA UX/UI ---
+// --- 🎨 ESTILIZAÇÃO MANTIDA ---
+const ForgotPasswordLink = styled.button`
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 11px;
+  text-align: right;
+  cursor: pointer;
+  margin-top: -5px;
+  text-decoration: underline;
+  transition: 0.2s;
+
+  &:hover { color: #00c2ff; }
+`;
 
 const Container = styled.div`
   display: flex;
@@ -117,21 +199,6 @@ const LeftSide = styled.div`
   z-index: 1;
   gap: 2rem;
   margin-bottom: 1.5rem;
-
-  /* 🦸 Logo como herói: escala +40% em telas acima de 1440px */
-  @media (min-width: 1440px) {
-    gap: 2.5rem;
-
-    img {
-      max-width: clamp(350px, 25vw, 560px) !important;
-    }
-  }
-
-  @media (min-width: 1920px) {
-    img {
-      max-width: clamp(490px, 28vw, 680px) !important;
-    }
-  }
 `;
 
 const Form = styled.form`
@@ -147,18 +214,6 @@ const Form = styled.form`
   border-radius: 25px;
   border: 2px solid #00c2ff;
   box-shadow: 0 0 40px rgba(0, 194, 255, 0.25);
-
-  /* 📐 Formulário proporcional em telas grandes */
-  @media (min-width: 1440px) {
-    max-width: 550px;
-    gap: 1rem;
-    padding: 2rem 2.5rem;
-  }
-
-  @media (min-width: 1920px) {
-    max-width: 620px;
-    padding: 2.5rem 3rem;
-  }
 `;
 
 const InputContainer = styled.div`
@@ -170,7 +225,6 @@ const InputContainer = styled.div`
     font-size: clamp(13px, 1.1vw, 16px);
     color: #fff;
     font-weight: bold;
-    letter-spacing: 1px;
     text-transform: uppercase;
   }
 
@@ -178,28 +232,14 @@ const InputContainer = styled.div`
     height: clamp(40px, 5vh, 52px);
     border-radius: 8px;
     border: 2px solid #333;
-    padding: 0 clamp(0.75rem, 1.5vw, 1.25rem);
+    padding: 0 1rem;
     background: #fff;
-    font-size: clamp(14px, 1.1vw, 17px);
-    transition: border-color 0.2s;
-
-    &:focus {
-      outline: none;
-      border-color: #00c2ff;
-      box-shadow: 0 0 8px rgba(0, 194, 255, 0.4);
-    }
-
-    @media (min-width: 1440px) {
-      height: 56px;
-      font-size: 1rem;
-    }
   }
 
   .error-msg {
     color: #ff4444;
     font-size: 11px;
     height: 14px;
-    margin-top: 2px;
   }
 `;
 
@@ -208,12 +248,8 @@ const SignUpSection = styled.div`
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 2px 0; /* 🚀 Margem reduzida para quase zero */
   
-  span {
-    color: #fff;
-    font-size: 13px;
-  }
+  span { color: #fff; font-size: 13px; }
 `;
 
 const LinkItem = styled(Link)`
@@ -221,7 +257,9 @@ const LinkItem = styled(Link)`
   font-family: 'Bangers', cursive;
   font-size: 18px;
   text-decoration: underline;
-  transition: 0.2s;
+  background: none;
+  border: none;
+  cursor: pointer;
 
   &:hover {
     color: #fff;

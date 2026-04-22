@@ -41,17 +41,36 @@ const CategoryCard = styled.div`
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  /* ✅ Adicionado Padding para o texto não encostar nas bordas do card */
-  padding: 15px; 
+  padding: 10px; /* Reduzi um pouco para ganhar mais espaço interno */
 
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    /* Gradiente mais escuro para garantir que o texto azul brilhe */
     background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 100%);
     z-index: 1;
-    transition: background 0.3s ease;
+  }
+
+  /* 🚀 A MÁGICA PARA O TEXTO NÃO QUEBRAR: */
+  h3 {
+    position: relative;
+    z-index: 2;
+    color: #00c2ff;
+    font-family: 'Bangers', cursive;
+    text-align: center;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0px #000;
+    transition: all 0.3s ease;
+    
+    /* 1. Impede a quebra de linha */
+    white-space: nowrap; 
+    
+    /* 2. Ajusta o tamanho da fonte baseado na largura do card */
+    font-size: clamp(1rem, 5vw, 1.8rem); 
+    
+    /* 3. Margem de segurança lateral */
+    width: 100%;
+    padding: 0 5px;
   }
 
   &:hover {
@@ -59,19 +78,11 @@ const CategoryCard = styled.div`
     box-shadow: 0 8px 25px rgba(0, 194, 255, 0.4);
     border-color: #ffa500;
     
-    &::after {
-      background: rgba(0, 0, 0, 0.5);
-    }
-
     h3 {
       color: #ffa500;
       text-shadow: 2px 2px 0px #000, 0 0 15px #ffa500;
-      transform: scale(1.1);
+      /* Removi o scale(1.1) para evitar que o texto saia do card no hover */
     }
-  }
-
-  &:active {
-    transform: translateY(2px) scale(0.98);
   }
 `;
 

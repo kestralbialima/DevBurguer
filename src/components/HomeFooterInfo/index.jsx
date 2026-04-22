@@ -88,12 +88,12 @@ const SocialGrid = styled.div`
 
 const FinalActionButton = styled.button`
   width: 100%;
-  padding: 25px;
+  padding: 15px;
   background: linear-gradient(90deg, #ff4500 0%, #ff8c00 100%);
   border: none;
   border-radius: 20px;
   font-family: 'Bangers';
-  font-size: 32px;
+  font-size: 25px;
   color: #fff;
   cursor: pointer;
   text-shadow: 2px 2px 0 #000;
